@@ -3,6 +3,8 @@ Analytics Edge Project: Clara, Lucas, Martin &amp; Val
 
 
 I Scope
+
+
 Every season, the NBA tip-off night comes with thrilling excitement among basketball fans all over
 the world. This project does not want to have to wait for the playoffs and thinks the regular season
 standings can be inferred from a blend of historical factors. By predicting the standings, it will
@@ -12,6 +14,8 @@ which NBA team has what is takes to win it all.
 
 
 II Datasets
+
+
 The data will be scraped from public websites Basketball Reference and RealGM. It contains data
 relating to all NBA seasons in history alongside advanced player and team metrics.
 
