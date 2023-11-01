@@ -51,3 +51,77 @@ def Schedule(year) :
     games = games[games.index <= sum(ngames_dict.values()) / 2 - 1] # Only keep regular season games
 
     return games
+
+
+
+
+def PlayerStats(year) :
+
+    def single_team(df) :
+        # For an input player, this function returns only a row with total stats and the latest team of the player
+        if len(df) > 1:
+            row = df[df['Tm'] == 'TOT']
+            row['Tm'] = df['Tm'].values[-1]
+            return row
+        else :
+            return df
+
+    # Scrape per game stats -- PTS, TRB, AST, ...
+    url = f'https://www.basketball-reference.com/leagues/NBA_{year}_per_game.html'
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'lxml')
+    table = soup.find('table')
+    while table.find(class_ = 'thead') is not None :
+        table.find(class_ = 'thead').decompose()
+    data_pg = pd.read_html(str(table))[0].drop(columns = ['Rk'])
+    data_pg.insert(1, 'href', [str(x).split('.html')[0].split('/')[-1] for x in table.find_all('a', href = True) if 'players' in str(x)])
+    data_pg = data_pg.groupby('href').apply(single_team).reset_index(drop = True)
+    data_pg['Player'] = data_pg['Player'].str.replace('*', '', regex = False)
+
+    # Scrape advanced stats -- PER, BPM, WS, VORP, ...
+    url = f'https://www.basketball-reference.com/leagues/NBA_{year}_advanced.html'
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'lxml')
+    table = soup.find('table')
+    while table.find(class_ = 'thead') is not None :
+        table.find(class_ = 'thead').decompose()
+    data_adv = pd.read_html(str(table))[0]
+    data_adv = data_adv.drop(columns = ['Rk'] + [x for x in data_adv.columns if 'Unnamed' in x])
+    data_adv.insert(1, 'href', [str(x).split('.html')[0].split('/')[-1] for x in table.find_all('a', href = True) if 'players' in str(x)])
+    data_adv = data_adv.groupby('href').apply(single_team).reset_index(drop = True)
+    data_adv['Player'] = data_adv['Player'].str.replace('*', '', regex = False)
+
+    # Merge per game and advanced stats together
+    data = data_pg.merge(data_adv, on = ['Player', 'href'], suffixes = ('', '_y'))
+    data = data.drop(columns = [col for col in data.columns if '_y' in col]).reset_index(drop = True) # Delete duplicated columns
+    data.insert(2, 'Year', len(data) * [year])
+
+    if len(data) != len(data_pg) or len(data) != len(data_adv):
+        Warning('Merge between per game and advanced stats is not 1:1 !!')
+
+    return data
+
+
+
+
+# This function creates a dictionary for any input year, where the key is the name of the team and the item is a list of players on the opening day roster
+def OpeningDayRoster(year) :
+
+    # Explore the page with all teams and links to rosters
+    url = f'https://basketball.realgm.com/nba/teams/{year}'
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'lxml')
+    # Make a list of all teams alongside their unique identifier
+    teams = [(x['href'].split('/')[4], x['href'].split('/')[3]) for x in soup.find_all('a', href = True) if '/teams/' in str(x) and 'Rosters' in str(x) and str(year) in str(x)]
+    
+    # Loop along each team
+    dict = {}
+    for i, tm in teams :
+        # Scrape the opening day roster table of the looped team and assign the list of players to the dictionary
+        url = f'https://basketball.realgm.com/nba/teams/{tm}/{i}/Rosters/Opening_Day/{year}'
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content, 'lxml')
+        table = soup.find_all('table')[6]
+        dict[' '.join(tm.split('-'))] = pd.read_html(str(table))[0]['Player'].to_list()
+
+    return dict
