@@ -121,7 +121,7 @@ def OpeningDayRoster(year) :
         url = f'https://basketball.realgm.com/nba/teams/{tm}/{i}/Rosters/Opening_Day/{year}'
         page = requests.get(url)
         soup = BeautifulSoup(page.content, 'lxml')
-        table = soup.find_all('table')[6]
+        table = [x for x in soup.find_all('table') if x.get('class') == ['tablesaw']][0]
         dict[' '.join(tm.split('-'))] = pd.read_html(str(table))[0]['Player'].to_list()
 
     return dict
