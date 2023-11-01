@@ -36,9 +36,11 @@ def Schedule(year) :
         soup = BeautifulSoup(requests.get(url).content, 'lxml')
         m_games = pd.read_html(str(soup.find('table')))[0]
         games = pd.concat([games, m_games])
+        time.sleep(3)
 
     # Data cleaning
     games = games.rename(columns = {'Start (ET)':'Time', 'Visitor/Neutral':'Away', 'Home/Neutral':'Home', 'PTS':'PTS_away', 'PTS.1':'PTS_home'})
+    games = games[games['PTS_home'] != 'Playoffs']
     if 'Time' in games.columns :
         games['Date'] = games['Date'] + games['Time'].apply(lambda x: ' ' + x[:-1] + x[-1].upper() + 'M')
     games['Date'] = pd.to_datetime(games['Date'])
