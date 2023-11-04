@@ -41,13 +41,15 @@ def Schedule(year) :
     # Data cleaning
     games = games.rename(columns = {'Start (ET)':'Time', 'Visitor/Neutral':'Away', 'Home/Neutral':'Home', 'PTS':'PTS_away', 'PTS.1':'PTS_home'})
     games = games[games['PTS_home'] != 'Playoffs']
-    if 'Time' in games.columns :
+    if 'Time' in games.columns and games['Time'].isna().sum() == 0 :
         games['Date'] = games['Date'] + games['Time'].apply(lambda x: ' ' + x[:-1] + x[-1].upper() + 'M')
     games['Date'] = pd.to_datetime(games['Date'])
     games = games[['Date', 'Home', 'Away', 'PTS_home', 'PTS_away']] # Keep necessary columns
     games = games.sort_values('Date').reset_index(drop = True)
-    games['Home'] = games['Home'].apply(lambda x: teams_dict.get(x))
-    games['Away'] = games['Away'].apply(lambda x: teams_dict.get(x))
+    games['HomeTm'] = games['Home'].apply(lambda x: teams_dict.get(x))
+    games['AwayTm'] = games['Away'].apply(lambda x: teams_dict.get(x))
+    games['Year'] = len(games) * [year]
+    games = games[['Date', 'Year', 'HomeTm', 'AwayTm', 'Home', 'Away']]
     games = games[games.index <= sum(ngames_dict.values()) / 2 - 1] # Only keep regular season games
 
     return games
