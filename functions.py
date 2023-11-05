@@ -127,3 +127,26 @@ def OpeningDayRoster(year) :
         dict[' '.join(tm.split('-'))] = pd.read_html(str(table))[0]['Player'].to_list()
 
     return dict
+
+
+# This function scrapes the division standings and outputs a dataframe of the standings for an input year
+def Standings(year):
+
+
+    url = f'https://www.basketball-reference.com/leagues/NBA_{year}_standings.html'
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'lxml')
+    while soup.find(class_ = 'thead') is not None:
+        soup.find(class_ = 'thead').decompose()
+    east_table, west_table = [t for t in soup.find_all('table') if 'divs_standings' in t.get('id')]
+
+    east = pd.read_html(str(east_table))[0].rename(columns = {'Eastern Conference': 'Team'})
+    east.insert(1, 'Tm', [str(x).split('/')[2] for x in east_table.find_all('a', href = True)])
+    west = pd.read_html(str(west_table))[0].rename(columns = {'Western Conference': 'Team'})
+    west.insert(1, 'Tm', [str(x).split('/')[2] for x in west_table.find_all('a', href = True)])
+
+    standings = pd.concat([east, west])
+    standings['Team'] = standings['Team'].str.replace('*', '', regex = False)
+    standings.insert(2, 'Year', len(standings) * [year])
+
+    return standings.sort_values('W/L%', ascending = False).drop(columns = ['GB']).reset_index(drop = True)
